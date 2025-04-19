@@ -1,0 +1,36 @@
+export const Colors = {
+  light: {
+    primary: '#0066FF',
+    secondary: '#7E869E',
+    background: '#FFFFFF',
+    card: '#F7F7F8',
+    text: '#1A1A1A',
+    border: '#E5E5E5',
+    notification: '#FF3B30',
+    muted: '#8E8E93',
+    shadow: 'rgba(0, 0, 0, 0.05)',
+    userBubble: '#E9F0FF',
+    aiBubble: '#F7F7F8',
+    success: '#34C759',
+    warning: '#FF9500',
+    error: '#FF3B30',
+  },
+  dark: {
+    primary: '#0A84FF',
+    secondary: '#8E8E93',
+    background: '#1C1C1E',
+    card: '#2C2C2E',
+    text: '#FFFFFF',
+    border: '#38383A',
+    notification: '#FF453A',
+    muted: '#8E8E93',
+    shadow: 'rgba(0, 0, 0, 0.2)',
+    userBubble: '#0A4680',
+    aiBubble: '#2C2C2E',
+    success: '#30D158',
+    warning: '#FF9F0A',
+    error: '#FF453A',
+  },
+};
+
+export default Colors;
