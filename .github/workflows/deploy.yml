@@ -23,10 +23,10 @@ jobs:
           npm install -g expo-cli
 
       - name: Build
-        run: npx expo export:web
+        run: npx expo export
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: web-build
+          folder: dist
           branch: gh-pages 
