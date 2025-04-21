@@ -36,7 +36,7 @@
       "favicon": "./assets/images/favicon.png",
       "bundler": "metro",
       "output": "static",
-      "publicPath": "/project"
+      "publicPath": "/homie-by-skyslope"
     },
     "plugins": [
       "expo-router",
