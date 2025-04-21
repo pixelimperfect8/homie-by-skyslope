@@ -5,49 +5,28 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v3
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          
-      - name: Install dependencies
+
+      - name: Install Dependencies
         run: |
           npm install
           npm install -g expo-cli
-        
-      - name: Build website
-        run: |
-          npx expo export:web
-          ls -la web-build
-        
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v2
+
+      - name: Build
+        run: npx expo export:web
+
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          path: web-build
-          
-  deploy:
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    permissions:
-      pages: write
-      id-token: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v2 
+          folder: web-build
+          branch: gh-pages 
