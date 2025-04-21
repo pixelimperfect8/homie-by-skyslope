@@ -1,9 +1,11 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, View, Alert } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 import Colors from '@/constants/Colors';
 import { Conversation } from '@/types';
 import { formatDistanceToNow } from '@/utils/dateFormatter';
+import { useChat } from '@/context/ChatContext';
+import { Ionicons } from '@expo/vector-icons';
 
 interface ConversationItemProps {
   conversation: Conversation;
@@ -18,6 +20,7 @@ export default function ConversationItem({
 }: ConversationItemProps) {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
+  const { deleteConversation } = useChat();
 
   // Get the most recent message that's not a system message
   const lastMessage = conversation.messages && conversation.messages.length > 0
@@ -35,6 +38,25 @@ export default function ConversationItem({
   const formattedDate = lastMessage 
     ? formatDistanceToNow(new Date(lastMessage.created_at)) 
     : formatDistanceToNow(new Date(conversation.created_at || Date.now()));
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Conversation',
+      'Are you sure you want to delete this conversation?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteConversation(conversation.id),
+        },
+      ],
+      { cancelable: true }
+    );
+  };
 
   return (
     <TouchableOpacity
@@ -61,6 +83,16 @@ export default function ConversationItem({
           {formattedDate}
         </Text>
       </View>
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={handleDelete}
+      >
+        <Ionicons
+          name="trash-outline"
+          size={20}
+          color={colors.muted}
+        />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 }
@@ -69,6 +101,8 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     borderBottomWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   contentContainer: {
     flex: 1,
@@ -83,5 +117,9 @@ const styles = StyleSheet.create({
   },
   time: {
     fontSize: 12,
+  },
+  deleteButton: {
+    padding: 8,
+    marginLeft: 8,
   },
 });

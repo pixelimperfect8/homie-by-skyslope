@@ -5,6 +5,7 @@ import { useTheme } from '@/context/ThemeContext';
 import Colors from '@/constants/Colors';
 import FormField from '@/components/FormField';
 import Button from '@/components/Button';
+import Logo from '@/components/Logo';
 import { useAuth } from '@/context/AuthContext';
 import { validateEmail, validatePassword } from '@/utils/validation';
 
@@ -43,10 +44,11 @@ export default function LoginScreen() {
     try {
       const { error } = await signIn(trimmedEmail, trimmedPassword);
       if (error) {
-        setErrorMessage('Invalid email or password. Please check your credentials and try again.');
+        // Use the specific error message from AuthContext
+        setErrorMessage(error.message);
       }
-    } catch (error) {
-      setErrorMessage('An unexpected error occurred. Please try again later.');
+    } catch (error: any) {
+      setErrorMessage(error.message || 'An unexpected error occurred. Please try again later.');
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -63,14 +65,11 @@ export default function LoginScreen() {
         contentContainerStyle={styles.contentContainer}
       >
         <View style={styles.header}>
-          <Text style={[styles.logo, { color: colors.primary }]}>Homie</Text>
-          <Text style={[styles.tagline, { color: colors.text }]}>
-            Your AI Real Estate Assistant
-          </Text>
+          <Logo />
         </View>
 
         <View style={styles.form}>
-          <Text style={[styles.title, { color: colors.text }]}>Log In</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Welcome!</Text>
           
           {errorMessage ? (
             <Text style={[styles.errorMessage, { color: colors.error }]}>
@@ -82,16 +81,14 @@ export default function LoginScreen() {
             label="Email"
             value={email}
             onChangeText={setEmail}
-            placeholder="Enter your email"
             keyboardType="email-address"
-            error={emailError}
+            error={emailError || undefined}
           />
           
           <FormField
             label="Password"
             value={password}
             onChangeText={setPassword}
-            placeholder="Enter your password"
             secureTextEntry
             error={passwordError}
           />
@@ -112,7 +109,7 @@ export default function LoginScreen() {
           />
           
           <View style={styles.signupContainer}>
-            <Text style={{ color: colors.text }}>Don't have an account? </Text>
+            <Text style={{ color: '#3F5B77' }}>Don't have an account? </Text>
             <Link href="/signup" asChild>
               <TouchableOpacity>
                 <Text style={{ color: colors.primary, fontWeight: '600' }}>
@@ -120,13 +117,6 @@ export default function LoginScreen() {
                 </Text>
               </TouchableOpacity>
             </Link>
-          </View>
-
-          <View style={styles.demoHint}>
-            <Text style={{ color: colors.secondary, textAlign: 'center' }}>
-              You need to create an account before logging in.
-              Please use the Sign up button to create an account first.
-            </Text>
           </View>
         </View>
       </ScrollView>
@@ -144,16 +134,8 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginTop: 60,
-    marginBottom: 40,
-  },
-  logo: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  tagline: {
-    fontSize: 18,
+    marginTop: 30,
+    marginBottom: 20,
   },
   form: {
     flex: 1,
@@ -169,19 +151,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   forgotPassword: {
-    textAlign: 'right',
+    textAlign: 'left',
     marginBottom: 24,
     fontSize: 14,
   },
   button: {
     marginBottom: 24,
+    paddingHorizontal: 0,
   },
   signupContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 16,
-  },
-  demoHint: {
-    marginTop: 24,
   }
 });

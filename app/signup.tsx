@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert, Image } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useTheme } from '@/context/ThemeContext';
 import Colors from '@/constants/Colors';
 import FormField from '@/components/FormField';
 import Button from '@/components/Button';
+import Logo from '@/components/Logo';
 import { useAuth } from '@/context/AuthContext';
 import { validateEmail, validatePassword, validateName } from '@/utils/validation';
+import LogoImage from '../assets/images/logo.png';
 
 export default function SignupScreen() {
   const { signUp } = useAuth();
@@ -40,34 +42,26 @@ export default function SignupScreen() {
     
     setIsLoading(true);
     setErrorMessage('');
+    setIsSuccess(false);
     
     try {
-      // Use demo@example.com as a demo account for testing
-      if (email.trim().toLowerCase() === 'demo@example.com') {
-        setName('Demo User');
-        setEmail('demo@example.com');
-        setPassword('password');
-      }
-      
       const { error } = await signUp(email.trim(), password, name.trim());
+      
       if (error) {
-        console.error('Signup error:', error);
-        if (error.message?.includes('email')) {
-          setErrorMessage('This email is already in use. Please log in or use a different email.');
-        } else {
-          setErrorMessage(error.message || 'Error creating account');
-        }
+        // Use the specific error message from AuthContext
+        setErrorMessage(error.message);
       } else {
         setIsSuccess(true);
+        setErrorMessage('');
         
         // Navigate to onboarding after a short delay
         setTimeout(() => {
           router.replace('/onboarding');
         }, 1500);
       }
-    } catch (error) {
-      console.error('Unexpected signup error:', error);
-      setErrorMessage('An unexpected error occurred. Please try again later.');
+    } catch (error: any) {
+      setErrorMessage(error.message || 'An unexpected error occurred during signup. Please try again.');
+      console.error('Signup error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -94,10 +88,7 @@ export default function SignupScreen() {
         contentContainerStyle={styles.contentContainer}
       >
         <View style={styles.header}>
-          <Text style={[styles.logo, { color: colors.primary }]}>Homie</Text>
-          <Text style={[styles.tagline, { color: colors.text }]}>
-            Your AI Real Estate Assistant
-          </Text>
+          <Logo />
         </View>
 
         <View style={styles.form}>
@@ -119,7 +110,6 @@ export default function SignupScreen() {
             label="Name"
             value={name}
             onChangeText={setName}
-            placeholder="Enter your name"
             autoCapitalize="words"
             error={nameError}
           />
@@ -128,7 +118,6 @@ export default function SignupScreen() {
             label="Email"
             value={email}
             onChangeText={setEmail}
-            placeholder="Enter your email"
             keyboardType="email-address"
             error={emailError}
           />
@@ -137,7 +126,6 @@ export default function SignupScreen() {
             label="Password"
             value={password}
             onChangeText={setPassword}
-            placeholder="Create a password"
             secureTextEntry
             error={passwordError}
           />
@@ -149,14 +137,8 @@ export default function SignupScreen() {
             style={styles.button}
           />
           
-          <TouchableOpacity onPress={handleUseDemoAccount} style={styles.demoButton}>
-            <Text style={{ color: colors.primary, textAlign: 'center', fontWeight: '500' }}>
-              Use Demo Account
-            </Text>
-          </TouchableOpacity>
-          
           <View style={styles.loginContainer}>
-            <Text style={{ color: colors.text }}>Already have an account? </Text>
+            <Text style={{ color: '#3F5B77' }}>Already have an account? </Text>
             <Link href="/login" asChild>
               <TouchableOpacity>
                 <Text style={{ color: colors.primary, fontWeight: '600' }}>
@@ -184,14 +166,6 @@ const styles = StyleSheet.create({
     marginTop: 60,
     marginBottom: 40,
   },
-  logo: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  tagline: {
-    fontSize: 18,
-  },
   form: {
     flex: 1,
   },
@@ -212,17 +186,11 @@ const styles = StyleSheet.create({
   },
   button: {
     marginBottom: 16,
-  },
-  demoButton: {
-    paddingVertical: 12,
-    marginBottom: 16,
-    backgroundColor: 'rgba(0, 102, 255, 0.1)',
-    borderRadius: 10,
-    padding: 10,
+    paddingHorizontal: 0,
   },
   loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 16,
-  },
+  }
 });

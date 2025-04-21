@@ -2,15 +2,22 @@ import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useColorScheme } from 'react-native';
 import Colors from '@/constants/Colors';
-import { Send } from 'lucide-react-native';
+import SendIcon from '@/assets/images/send.svg';
 
+// Keep props signature for compatibility, but ignore them
 interface MessageInputProps {
-  onSend: (message: string) => void;
+  onSend: (content: string) => void;
+  isLoading?: boolean;
   disabled?: boolean;
 }
 
-export default function MessageInput({ onSend, disabled = false }: MessageInputProps) {
+export default function MessageInput({ 
+  onSend, 
+  isLoading = false,
+  disabled = false 
+}: MessageInputProps) {
   const [message, setMessage] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
   const colorScheme = useColorScheme() || 'light';
   const colors = Colors[colorScheme];
 
@@ -22,73 +29,91 @@ export default function MessageInput({ onSend, disabled = false }: MessageInputP
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
-      style={styles.container}
-    >
-      <View style={[
-        styles.inputContainer,
-        { 
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-        }
-      ]}>
-        <TextInput
-          style={[styles.input, { color: colors.text }]}
-          placeholder="Message Homie..."
-          placeholderTextColor={colors.muted}
-          value={message}
-          onChangeText={setMessage}
-          multiline
-          maxLength={1000}
-          numberOfLines={5}
-          editable={!disabled}
-        />
+    <View style={styles.container}>
+      <View style={styles.inputRow}>
+        <View style={[
+          styles.inputContainer,
+          { 
+            borderColor: isFocused ? colors.primary : 'transparent',
+            borderWidth: 1
+          }
+        ]}>
+          <TextInput
+            style={[
+              styles.input, 
+              { 
+                color: colors.text,
+                outline: 'none',
+                WebkitAppearance: 'none',
+              }
+            ]}
+            placeholder=""
+            placeholderTextColor={colors.muted}
+            value={message}
+            onChangeText={setMessage}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            multiline
+            maxLength={1000}
+            numberOfLines={1} 
+            editable={!disabled}
+            selectionColor="#F4F8FC"
+            keyboardAppearance="light"
+            cursorColor={colors.primary}
+          />
+        </View>
         <TouchableOpacity
-          style={[
-            styles.sendButton,
-            { backgroundColor: colors.primary },
-            (!message.trim() || disabled) && { opacity: 0.5 }
-          ]}
+          style={[styles.sendButton, { opacity: message.trim() ? 1 : 0.5 }]}
           onPress={handleSend}
-          disabled={!message.trim() || disabled}
-          activeOpacity={0.7}
+          disabled={!message.trim() || disabled || isLoading}
         >
-          <Send size={20} color="white" />
+          <View style={styles.sendButtonContainer}>
+            <SendIcon width={24} height={24} fill={colors.primary} />
+          </View>
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    paddingTop: 8,
+    padding: 16,
+    backgroundColor: '#FFFFFF', 
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    borderWidth: 1,
+    flex: 1,
+    minHeight: 48, // Use minHeight to allow expansion
+    backgroundColor: '#F4F8FC',
     borderRadius: 24,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: Platform.OS === 'ios' ? 12 : 8, // Adjust padding per platform
+    justifyContent: 'center',
+    ...(Platform.OS === 'web' ? {
+      ':focus-within': {
+        outline: 'none',
+      }
+    } : {}),
   },
   input: {
-    flex: 1,
     fontSize: 16,
-    maxHeight: 120,
-    paddingTop: 8,
-    paddingRight: 8,
+    lineHeight: 20, // Ensure consistent line height
+    maxHeight: 100, // Limit max height for multiline
+    textAlignVertical: 'center',
   },
   sendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    marginLeft: 16,
+  },
+  sendButtonContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F4F8FC',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
   },
 });

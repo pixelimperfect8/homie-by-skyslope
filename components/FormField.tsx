@@ -29,14 +29,12 @@ export default function FormField({
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+      <Text style={styles.label}>{label}</Text>
       <TextInput
         style={[
           styles.input,
           { 
-            backgroundColor: colors.card,
             color: colors.text,
-            borderColor: error ? colors.error : colors.border 
           },
         ]}
         value={value}
@@ -58,15 +56,18 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '400',
     marginBottom: 8,
+    color: '#3F5B77',
   },
   input: {
     height: 48,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 6,
     paddingHorizontal: 16,
     fontSize: 16,
+    backgroundColor: '#FAFCFF',
+    borderColor: '#DEE5ED',
   },
   errorText: {
     fontSize: 14,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Dimensions, Modal } from 'react-native';
 import { useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,7 +6,8 @@ import Colors from '@/constants/Colors';
 import Button from '@/components/Button';
 import { useAuth } from '@/context/AuthContext';
 import { agents } from '@/assets/agent-images';
-import { Phone, Mail, Star, Calculator, Users, Clock, ChevronRight, ChevronDown, X } from 'lucide-react-native';
+import { Phone, Mail, Star, Calculator, Users, Clock, ChevronRight, ChevronDown, X, Search, 
+  UserSquare2, Wallet, FileText, Building2, LineChart as ChartIcon, Wrench, Shield, HardHat } from 'lucide-react-native';
 import { LineChart } from 'react-native-chart-kit';
 
 const { width } = Dimensions.get('window');
@@ -16,7 +17,7 @@ export default function ResourcesScreen() {
   const colorScheme = useColorScheme() || 'light';
   const colors = Colors[colorScheme];
   
-  const [activeTab, setActiveTab] = useState<'calculator' | 'agents' | 'timeline' | 'overview'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'calculator' | 'agents' | 'timeline'>('overview');
   const [timelineModalVisible, setTimelineModalVisible] = useState(false);
   const [selectedTimeline, setSelectedTimeline] = useState('buying');
   
@@ -26,6 +27,13 @@ export default function ResourcesScreen() {
   const [interestRate, setInterestRate] = useState('4.5');
   const [term, setTerm] = useState('30');
   
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Add console log to track tab changes
+  useEffect(() => {
+    console.log('Active tab changed to:', activeTab);
+  }, [activeTab]);
+
   const renderCalculator = () => {
     const monthlyIncome = parseFloat(income) || 0;
     const totalDownPayment = parseFloat(downPayment) || 0;
@@ -78,7 +86,6 @@ export default function ResourcesScreen() {
             onChangeText={setIncome}
             keyboardType="numeric"
             placeholder="5000"
-            placeholderTextColor={colors.muted}
           />
         </View>
         
@@ -93,7 +100,6 @@ export default function ResourcesScreen() {
             onChangeText={setDownPayment}
             keyboardType="numeric"
             placeholder="50000"
-            placeholderTextColor={colors.muted}
           />
         </View>
         
@@ -109,7 +115,6 @@ export default function ResourcesScreen() {
               onChangeText={setInterestRate}
               keyboardType="numeric"
               placeholder="4.5"
-              placeholderTextColor={colors.muted}
             />
           </View>
           
@@ -124,7 +129,6 @@ export default function ResourcesScreen() {
               onChangeText={setTerm}
               keyboardType="numeric"
               placeholder="30"
-              placeholderTextColor={colors.muted}
             />
           </View>
         </View>
@@ -143,24 +147,41 @@ export default function ResourcesScreen() {
             Monthly Payment Breakdown
           </Text>
           
-          <LineChart
-            data={chartData}
-            width={width - 64}
-            height={220}
-            chartConfig={{
-              backgroundColor: colors.card,
-              backgroundGradientFrom: colors.card,
-              backgroundGradientTo: colors.card,
-              decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(0, 102, 255, ${opacity})`,
-              labelColor: (opacity = 1) => colors.text,
-              style: {
+          <View style={styles.chartContainer}>
+            <LineChart
+              data={chartData}
+              width={width - 80}
+              height={220}
+              chartConfig={{
+                backgroundColor: colors.card,
+                backgroundGradientFrom: colors.card,
+                backgroundGradientTo: colors.card,
+                decimalPlaces: 0,
+                color: (opacity = 1) => `rgba(0, 102, 255, ${opacity})`,
+                labelColor: (opacity = 1) => colors.text,
+                style: {
+                  borderRadius: 16,
+                },
+                propsForLabels: {
+                  fontSize: 12,
+                  fontFamily: 'System',
+                },
+                propsForBackgroundLines: {
+                  strokeDasharray: '2, 2',
+                  stroke: colors.border,
+                },
+              }}
+              bezier
+              style={{
+                marginVertical: 8,
                 borderRadius: 16,
-              },
-            }}
-            bezier
-            style={styles.chart}
-          />
+                alignSelf: 'center',
+              }}
+              withInnerLines={true}
+              withOuterLines={true}
+              fromZero={true}
+            />
+          </View>
           
           <View style={styles.breakdown}>
             <View style={styles.breakdownItem}>
@@ -492,6 +513,119 @@ export default function ResourcesScreen() {
     );
   };
   
+  const renderWhosWho = () => {
+    console.log('Rendering Who\'s Who section');
+    const keyPlayers = [
+      {
+        title: 'Real Estate Agent',
+        description: 'Licensed professional who represents buyers or sellers in real estate transactions.',
+        icon: <UserSquare2 size={24} color="#4C6FFF" />,
+        iconBg: '#4C6FFF1A'
+      },
+      {
+        title: 'Loan Officer',
+        description: 'Helps borrowers secure financing and guides them through the mortgage process.',
+        icon: <Wallet size={24} color="#00C48C" />,
+        iconBg: '#00C48C1A'
+      },
+      {
+        title: 'Escrow Officer',
+        description: 'Neutral third party who handles the closing process and ensures all conditions are met.',
+        icon: <FileText size={24} color="#FF9F43" />,
+        iconBg: '#FF9F431A'
+      },
+      {
+        title: 'Title Company',
+        description: 'Conducts title searches and provides title insurance to protect against ownership disputes.',
+        icon: <Building2 size={24} color="#FF6B6B" />,
+        iconBg: '#FF6B6B1A'
+      },
+      {
+        title: 'Appraiser',
+        description: 'Determines the fair market value of a property through detailed analysis.',
+        icon: <ChartIcon size={24} color="#4ECFFF" />,
+        iconBg: '#4ECFFF1A'
+      },
+      {
+        title: 'Home Inspector',
+        description: 'Evaluates the condition of a property and identifies potential issues.',
+        icon: <Search size={24} color="#845EEF" />,
+        iconBg: '#845EEF1A'
+      },
+      {
+        title: 'Insurance Agent',
+        description: 'Provides homeowners insurance and other property-related coverage.',
+        icon: <Shield size={24} color="#FF73B5" />,
+        iconBg: '#FF73B51A'
+      },
+      {
+        title: 'Contractor',
+        description: 'Handles repairs, renovations, and construction work on properties.',
+        icon: <HardHat size={24} color="#20C997" />,
+        iconBg: '#20C9971A'
+      },
+    ];
+
+    const filteredPlayers = keyPlayers.filter(player => 
+      player.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      player.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    return (
+      <View style={styles.whosWhoContainer}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Key Players in Real Estate
+        </Text>
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={[
+              styles.searchInput,
+              { 
+                backgroundColor: '#FAFCFF',
+                color: colors.text,
+                borderColor: '#DEE5ED'
+              }
+            ]}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          <Search size={20} color="#AFBECD" style={styles.searchIcon} />
+        </View>
+        <ScrollView style={styles.whosWhoList}>
+          {filteredPlayers.length > 0 ? (
+            filteredPlayers.map((player, index) => (
+              <View 
+                key={index} 
+                style={[
+                  styles.playerCard,
+                  { backgroundColor: '#FFFFFF', borderColor: '#EBF1F6' }
+                ]}
+              >
+                <View style={[styles.playerIconContainer, { backgroundColor: player.iconBg }]}>
+                  {player.icon}
+                </View>
+                <View style={styles.playerInfo}>
+                  <Text style={[styles.playerTitle, { color: colors.text }]}>
+                    {player.title}
+                  </Text>
+                  <Text style={[styles.playerDescription, { color: colors.secondary }]}>
+                    {player.description}
+                  </Text>
+                </View>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={[styles.emptyStateText, { color: colors.secondary }]}>
+                Couldn't find any matches
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      </View>
+    );
+  };
+  
   const renderToolCards = () => {
     return (
       <View style={styles.toolCards}>
@@ -547,86 +681,88 @@ export default function ResourcesScreen() {
   };
   
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Resources</Text>
-      </View>
-      
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'overview' && [styles.activeTab, { borderBottomColor: colors.primary }],
-          ]}
-          onPress={() => setActiveTab('overview')}
-        >
-          <Text
+    <SafeAreaView style={[styles.container]} edges={['top']}>
+      <ScrollView 
+        style={styles.scrollView}
+        stickyHeaderIndices={[0]}
+        contentContainerStyle={{ paddingTop: 0 }}
+      >
+        <View style={styles.tabs}>
+          <TouchableOpacity
             style={[
-              styles.tabText,
-              { color: activeTab === 'overview' ? colors.primary : colors.text },
+              styles.tab,
+              activeTab === 'overview' && styles.activeTab,
             ]}
+            onPress={() => setActiveTab('overview')}
           >
-            Overview
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'calculator' && [styles.activeTab, { borderBottomColor: colors.primary }],
-          ]}
-          onPress={() => setActiveTab('calculator')}
-        >
-          <Text
+            <Text
+              style={[
+                styles.tabText,
+                { color: activeTab === 'overview' ? colors.primary : colors.text },
+              ]}
+            >
+              Players
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
             style={[
-              styles.tabText,
-              { color: activeTab === 'calculator' ? colors.primary : colors.text },
+              styles.tab,
+              activeTab === 'calculator' && styles.activeTab,
             ]}
+            onPress={() => setActiveTab('calculator')}
           >
-            Calculator
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'agents' && [styles.activeTab, { borderBottomColor: colors.primary }],
-          ]}
-          onPress={() => setActiveTab('agents')}
-        >
-          <Text
+            <Text
+              style={[
+                styles.tabText,
+                { color: activeTab === 'calculator' ? colors.primary : colors.text },
+              ]}
+            >
+              Calculator
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
             style={[
-              styles.tabText,
-              { color: activeTab === 'agents' ? colors.primary : colors.text },
+              styles.tab,
+              activeTab === 'agents' && styles.activeTab,
             ]}
+            onPress={() => setActiveTab('agents')}
           >
-            Find Agents
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'timeline' && [styles.activeTab, { borderBottomColor: colors.primary }],
-          ]}
-          onPress={() => setActiveTab('timeline')}
-        >
-          <Text
+            <Text
+              style={[
+                styles.tabText,
+                { color: activeTab === 'agents' ? colors.primary : colors.text },
+              ]}
+            >
+              Agents
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
             style={[
-              styles.tabText,
-              { color: activeTab === 'timeline' ? colors.primary : colors.text },
+              styles.tab,
+              activeTab === 'timeline' && styles.activeTab,
             ]}
+            onPress={() => setActiveTab('timeline')}
           >
-            Timeline
-          </Text>
-        </TouchableOpacity>
-      </View>
-      
-      <ScrollView contentContainerStyle={styles.content}>
-        {activeTab === 'overview' && renderToolCards()}
-        {activeTab === 'calculator' && renderCalculator()}
-        {activeTab === 'agents' && renderAgents()}
-        {activeTab === 'timeline' && renderTimeline()}
+            <Text
+              style={[
+                styles.tabText,
+                { color: activeTab === 'timeline' ? colors.primary : colors.text },
+              ]}
+            >
+              Timeline
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.content}>
+          {activeTab === 'overview' && renderWhosWho()}
+          {activeTab === 'calculator' && renderCalculator()}
+          {activeTab === 'agents' && renderAgents()}
+          {activeTab === 'timeline' && renderTimeline()}
+        </View>
       </ScrollView>
 
       {/* Timeline Selection Modal */}
@@ -694,35 +830,40 @@ export default function ResourcesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
-  header: {
-    padding: 16,
-    borderBottomWidth: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+  scrollView: {
+    flex: 1,
   },
   tabs: {
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+  },
+  content: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    paddingTop: 24,
+    paddingHorizontal: 0,
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    height: 48,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderRadius: 8,
   },
   activeTab: {
-    borderBottomWidth: 2,
+    backgroundColor: '#E1F1FF',
   },
   tabText: {
     fontWeight: '500',
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
+    fontSize: 16,
   },
   
   // Tool cards styles
@@ -758,15 +899,17 @@ const styles = StyleSheet.create({
   
   // Calculator styles
   calculatorContainer: {
-    marginBottom: 20,
+    padding: 20,
+    marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 16,
+    marginHorizontal: 16,
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   label: {
     marginBottom: 8,
@@ -782,19 +925,21 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: 20,
+    gap: 16,
   },
   resultContainer: {
-    marginTop: 16,
-    padding: 16,
+    marginTop: 24,
+    padding: 20,
     borderRadius: 12,
+    overflow: 'hidden',
   },
   resultHeader: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   resultTitle: {
     fontSize: 16,
-    marginBottom: 4,
+    marginBottom: 8,
   },
   resultPrice: {
     fontSize: 24,
@@ -802,23 +947,24 @@ const styles = StyleSheet.create({
   },
   resultSubtitle: {
     fontSize: 16,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   chart: {
     borderRadius: 16,
     marginBottom: 16,
+    overflow: 'hidden',
   },
   breakdown: {
-    marginTop: 16,
+    marginTop: 20,
   },
   breakdownItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   totalItem: {
-    marginTop: 8,
-    paddingTop: 8,
+    marginTop: 16,
+    paddingTop: 16,
     borderTopWidth: 1,
   },
   breakdownLabel: {
@@ -830,7 +976,9 @@ const styles = StyleSheet.create({
   
   // Agents styles
   agentsContainer: {
-    marginBottom: 20,
+    flex: 1,
+    padding: 20,
+    marginBottom: 24,
   },
   agentCard: {
     flexDirection: 'row',
@@ -868,6 +1016,7 @@ const styles = StyleSheet.create({
   },
   agentActions: {
     flexDirection: 'row',
+    gap: 12,
   },
   agentButton: {
     flexDirection: 'row',
@@ -876,35 +1025,33 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
-    marginRight: 8,
     borderWidth: 1,
-    borderColor: 'transparent',
   },
   agentButtonText: {
     marginLeft: 4,
     fontWeight: '500',
-    color: 'white',
   },
   
   // Timeline styles
   timelineContainer: {
-    marginBottom: 20,
+    flex: 1,
+    padding: 20,
+    marginBottom: 24,
   },
   timelineTitleContainer: {
-    marginBottom: 16,
-    position: 'relative',
+    marginBottom: 20,
   },
   timelineHeaderContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   dropdownButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
   },
@@ -959,14 +1106,12 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     borderRadius: 12,
     padding: 20,
-    elevation: 5,
-    boxShadow: '0px 2px 3.84px rgba(0, 0, 0, 0.25)',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   modalTitle: {
     fontSize: 18,
@@ -994,5 +1139,81 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-  }
+  },
+  
+  whosWhoContainer: {
+    padding: 0,
+    flex: 1,
+  },
+  whosWhoList: {
+    flex: 1,
+  },
+  playerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#EBF1F6',
+    marginHorizontal: 16,
+  },
+  playerIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  playerInfo: {
+    flex: 1,
+  },
+  playerTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  playerDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  searchContainer: {
+    marginBottom: 16,
+    position: 'relative',
+    marginHorizontal: 16,
+  },
+  searchInput: {
+    height: 48,
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 16,
+    paddingRight: 48,
+    fontSize: 16,
+    backgroundColor: '#FAFCFF',
+    borderColor: '#DEE5ED',
+    color: '#3F5B77',
+  },
+  searchIcon: {
+    position: 'absolute',
+    right: 16,
+    top: '50%',
+    marginTop: -10,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  chartContainer: {
+    alignItems: 'center',
+    marginHorizontal: -20,
+    marginVertical: 16,
+  },
 });

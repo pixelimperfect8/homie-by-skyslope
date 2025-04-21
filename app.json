@@ -1,24 +1,61 @@
 {
   "expo": {
-    "name": "bolt-expo-nativewind",
-    "slug": "bolt-expo-nativewind",
+    "name": "Homie",
+    "slug": "homie",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition.",
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
+      "favicon": "./assets/images/favicon.png",
       "bundler": "metro",
-      "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "output": "static",
+      "publicPath": "/project"
     },
-    "plugins": ["expo-router"],
-    "experiments": {
-      "typedRoutes": true
+    "plugins": [
+      "expo-router",
+      "expo-speech-recognition"
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "1bd0eacf-2b4b-4ada-bee7-d424ec164f36"
+      }
+    },
+    "owner": "ivanojeda8",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/1bd0eacf-2b4b-4ada-bee7-d424ec164f36"
     }
   }
 }

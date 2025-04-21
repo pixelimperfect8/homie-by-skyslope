@@ -32,12 +32,12 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
       <View style={[
         styles.bubble,
         isUser 
-          ? [styles.userBubble, { backgroundColor: colors.userBubble }] 
-          : [styles.assistantBubble, { backgroundColor: colors.aiBubble }],
+          ? [styles.userBubble, { backgroundColor: '#09256C' }] 
+          : [styles.assistantBubble, { backgroundColor: '#F4F8FC' }],
       ]}>
         <Text style={[
           styles.text,
-          { color: colors.text }
+          isUser ? { color: '#EFFFFF' } : { color: '#3F5B77' }
         ]}>
           {message.content}
         </Text>
@@ -48,22 +48,27 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 8,
-    maxWidth: '80%',
+    marginVertical: 4,
+    width: '100%',
+    paddingHorizontal: 0,
   },
   userContainer: {
     alignSelf: 'flex-end',
+    width: '100%',
+    alignItems: 'flex-end',
+    paddingRight: 0,
   },
   assistantContainer: {
     alignSelf: 'flex-start',
+    width: '100%',
+    alignItems: 'flex-start',
+    paddingLeft: 0,
   },
   bubble: {
-    maxWidth: '80%',
-    padding: 12,
+    maxWidth: '85%',
+    padding: 16,
     borderRadius: 16,
-    marginVertical: 4,
-    elevation: 2,
-    boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.1)',
+    marginVertical: 2,
   },
   userBubble: {
     borderBottomRightRadius: 4,
@@ -73,6 +78,6 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 16,
-    lineHeight: 22,
+    lineHeight: 20,
   },
 });

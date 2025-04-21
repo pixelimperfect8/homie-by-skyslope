@@ -1,60 +1,80 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { useColorScheme } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
 import Colors from '@/constants/Colors';
+import { QuickPrompt } from '@/types';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface QuickPromptButtonProps {
-  text: string;
+  prompt: QuickPrompt;
   onPress: () => void;
+  disabled?: boolean;
 }
 
-export default function QuickPromptButton({ text, onPress }: QuickPromptButtonProps) {
-  const colorScheme = useColorScheme() || 'light';
-  const colors = Colors[colorScheme];
+export default function QuickPromptButton({ 
+  prompt,
+  onPress,
+  disabled = false 
+}: QuickPromptButtonProps) {
+  const { colorScheme } = useTheme();
+  const colors = Colors[colorScheme as keyof typeof Colors];
 
   // Check if this is the Explore Timelines button to give it a special appearance
-  const isTimelineButton = text.includes('🧭 Explore');
+  const isTimelineButton = prompt.text.includes('🧭 Explore');
 
   return (
     <TouchableOpacity
-      style={[
-        styles.button, 
-        { 
-          backgroundColor: isTimelineButton ? colors.primary + '20' : colors.card, 
-          borderColor: isTimelineButton ? colors.primary : colors.border 
-        }
-      ]}
+      style={styles.button}
       onPress={onPress}
+      disabled={disabled}
       activeOpacity={0.7}
     >
-      <Text 
-        style={[
-          styles.text, 
-          { 
-            color: isTimelineButton ? colors.primary : colors.text,
-            fontWeight: isTimelineButton ? '600' : '500'
-          }
-        ]} 
-        numberOfLines={2}
+      <LinearGradient
+        colors={['#00439A', '#3E75C2', '#86ACE3', '#92DDE7', '#47E9FF']}
+        locations={[0, 0.21, 0.46, 0.67, 0.99]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.gradientBorder}
       >
-        {text}
-      </Text>
+        <View style={styles.innerContainer}>
+          <Text 
+            style={[
+              styles.text, 
+              { 
+                color: '#09256C',
+                fontWeight: isTimelineButton ? '600' : '500'
+              }
+            ]} 
+            numberOfLines={2}
+          >
+            {prompt.text}
+          </Text>
+        </View>
+      </LinearGradient>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 12,
-    marginRight: 8,
-    marginBottom: 8,
-    maxWidth: 180,
-    minHeight: 64,
+    width: '100%',
+  },
+  gradientBorder: {
+    borderRadius: 8,
+    padding: 1,
+  },
+  innerContainer: {
+    borderRadius: 7,
+    backgroundColor: 'white',
+    padding: 16,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    minHeight: 50,
   },
   text: {
     fontSize: 14,
     fontWeight: '500',
+    textAlign: 'left',
   },
 });

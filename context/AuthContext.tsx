@@ -2,7 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@/types';
 import { Session } from '@supabase/supabase-js';
-import { router } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 import { Platform, Alert } from 'react-native';
 
 interface AuthContextType {
@@ -22,60 +22,101 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [authInitialized, setAuthInitialized] = useState(false);
+
+  const router = useRouter();
+  const segments = useSegments();
+
+  // Helper function to check current route
+  const isInAuthGroup = () => segments.includes('(auth)');
+  const isInOnboarding = () => segments.includes('onboarding');
 
   useEffect(() => {
     let authTimeout: NodeJS.Timeout;
+    let mounted = true;
 
     const initializeAuth = async () => {
       try {
         console.log('Initializing auth...');
         
-        // Set a timeout to prevent auth hanging indefinitely
+        // Increase timeout to 30 seconds for slower connections
         authTimeout = setTimeout(() => {
-          console.log('Auth initialization timeout reached');
-          setIsLoading(false);
-        }, 5000);
+          if (mounted) {
+            console.log('Auth initialization timeout reached');
+            setIsLoading(false);
+            setAuthInitialized(true);
+          }
+        }, 30000);
         
-        const { data } = await supabase.auth.getSession();
-        console.log('Auth session loaded:', !!data.session);
-        setSession(data.session);
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (data.session?.user) {
-          console.log('User is logged in, fetching profile');
-          await fetchUser(data.session.user.id);
-        } else {
-          console.log('No active session');
-          setUser(null);
+        if (error) {
+          console.error('Error getting session:', error);
+          throw error;
         }
+
+        console.log('Auth session loaded:', !!session);
         
-        clearTimeout(authTimeout);
+        if (mounted) {
+          setSession(session);
+          
+          if (session?.user) {
+            console.log('User is logged in, fetching profile');
+            await fetchUser(session.user.id);
+          } else {
+            console.log('No active session');
+            setUser(null);
+            // Redirect to login if not in onboarding
+            if (!isInOnboarding() && !isInAuthGroup()) {
+              router.replace('/login');
+            }
+          }
+          
+          setIsLoading(false);
+          setAuthInitialized(true);
+          clearTimeout(authTimeout);
+        }
       } catch (error) {
         console.error('Error initializing auth:', error);
-      } finally {
-        console.log('Auth initialization complete');
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+          setAuthInitialized(true);
+        }
       }
     };
 
     initializeAuth();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        console.log('Auth state changed:', _event);
-        setSession(session);
+      async (event, session) => {
+        console.log('Auth state changed:', event);
         
-        if (session?.user) {
-          console.log('User session updated, fetching profile');
-          await fetchUser(session.user.id);
-        } else {
-          console.log('User logged out or session expired');
-          setUser(null);
+        if (mounted) {
+          setSession(session);
+          
+          if (session?.user) {
+            console.log('User session updated, fetching profile');
+            await fetchUser(session.user.id);
+            
+            // Navigate to chat if coming from login
+            if (isInAuthGroup()) {
+              router.replace('/chat');
+            }
+          } else {
+            console.log('User logged out or session expired');
+            setUser(null);
+            // Redirect to login unless already there or in onboarding
+            if (!isInOnboarding() && !isInAuthGroup()) {
+              router.replace('/login');
+            }
+          }
         }
       }
     );
 
     return () => {
       console.log('Cleaning up auth listener');
+      mounted = false;
       clearTimeout(authTimeout);
       authListener?.subscription.unsubscribe();
     };
@@ -105,43 +146,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('User profile loaded successfully');
         setUser(data[0]);
       } else {
-        console.log('Profile not found, creating default profile');
-        try {
-          // Try to create a default profile
-          const { error: insertError } = await supabase.auth.admin.createUser({
-            email: 'default@example.com',
-            password: 'password',
-            email_confirm: true,
-          });
-          
-          if (insertError) {
-            console.error('Error creating default user:', insertError);
-          }
-          
-          const { data: userData, error: profileError } = await supabase
-            .from('profiles')
-            .insert([
-              {
-                id: userId,
-                email: 'default@example.com',
-                name: 'Default User',
-                user_type: 'buyer',
-                created_at: new Date().toISOString(),
-              }
-            ])
-            .select();
-          
-          if (profileError) {
-            console.error('Error creating default profile:', profileError);
-            setUser(null);
-          } else if (userData && userData.length > 0) {
-            console.log('Created default user profile');
-            setUser(userData[0]);
-          }
-        } catch (createError) {
-          console.error('Error creating user profile:', createError);
-          setUser(null);
-        }
+        // Profile not found - this indicates an issue, likely during signup.
+        // Do not attempt to create a default profile here.
+        console.error('Profile not found for user ID:', userId, '. This likely means profile creation failed during signup.');
+        setUser(null); // Set user to null as the state is inconsistent
+        // Consider adding more robust error handling or reporting here
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -152,26 +161,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string, name: string) => {
     try {
       console.log('Creating new user account...');
-      
-      // For demo purposes, add a special check for demo@example.com
-      if (email === "demo@example.com") {
-        console.log('Creating demo account');
-        
-        // Try to delete existing demo user if it exists (for development/testing)
-        try {
-          const { data: existingUser } = await supabase.auth.signInWithPassword({
-            email: "demo@example.com",
-            password: "password"
-          });
-          
-          if (existingUser.user) {
-            console.log('Found existing demo user, cleaning up');
-            // Cannot delete users without admin privileges, so we'll just use the existing account
-          }
-        } catch (e) {
-          console.log('No existing demo user or cleanup failed, continuing');
-        }
-      }
       
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
@@ -192,94 +181,119 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.user) {
         console.log('User created with ID:', data.user.id);
         
-        // Create a profile for the new user
-        const { error: profileError } = await supabase.from('profiles').insert([
-          {
-            id: data.user.id,
-            email: email.trim(),
-            name,
-            user_type: 'buyer', // Default user type
-            created_at: new Date().toISOString(),
+        // Retry profile creation up to 3 times
+        let profileError = null;
+        for (let i = 0; i < 3; i++) {
+          const { error: insertError } = await supabase.from('profiles').insert([
+            {
+              id: data.user.id,
+              email: email.trim(),
+              name: name.trim(),
+              user_type: 'buyer',
+              created_at: new Date().toISOString(),
+            }
+          ]);
+          
+          if (!insertError) {
+            console.log('User profile created successfully');
+            profileError = null;
+            break;
           }
-        ]);
-
-        if (profileError) {
-          console.error('Error creating user profile:', profileError);
-          return { error: profileError };
+          
+          console.error(`Profile creation attempt ${i + 1} failed:`, insertError);
+          profileError = insertError;
+          
+          if (i < 2) { // Don't wait on the last attempt
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
+          }
         }
 
-        console.log('User profile created successfully');
-        
-        // Set the user and session directly to avoid navigation issues
+        if (profileError) {
+          return { error: { message: 'Failed to create user profile. Please try again.' } };
+        }
+
         setSession(data.session);
         setUser({
           id: data.user.id,
           email: email.trim(),
-          name,
+          name: name.trim(),
           user_type: 'buyer',
           created_at: new Date().toISOString()
         });
         
-        // Redirect to onboarding after signup
-        setTimeout(() => {
-          router.replace('/onboarding');
-        }, 1000);
+        router.replace('/onboarding');
       }
 
       return { error: null };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error during signup:', error);
-      return { error };
+      return { error: { message: error.message || 'An unexpected error occurred during signup.' } };
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
       console.log('Attempting to sign in user:', email);
+      setIsLoading(true);
       
-      // For demo purposes, also support demo credentials
-      if (email === "demo@example.com" && password === "password") {
-        try {
-          console.log('Using demo credentials');
-          const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          
-          if (!error) {
-            console.log('Demo login successful');
-            router.replace('/chat');
-            return { error: null };
-          }
-        } catch (e) {
-          console.log('Error with demo login, falling back to regular signin');
-        }
-      }
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      // Increase timeout to 20 seconds
+      const timeoutPromise = new Promise<{ data: any; error: any }>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Sign-in request timed out. Please check your connection and try again.'));
+        }, 20000);
       });
 
-      if (!error) {
-        console.log('Login successful, navigating to chat');
-        router.replace('/chat');
-      } else {
+      // Race between the sign-in and timeout
+      const { data, error } = await Promise.race([
+        supabase.auth.signInWithPassword({
+          email,
+          password,
+        }),
+        timeoutPromise
+      ]);
+
+      if (error) {
         console.error('Login failed:', error);
+        // Return more specific error messages
+        if (error.message.includes('timeout')) {
+          return { error: { message: 'Connection timeout. Please try again.' } };
+        } else if (error.message.includes('Invalid login credentials')) {
+          return { error: { message: 'Invalid email or password.' } };
+        } else {
+          return { error: { message: 'Login failed. Please try again.' } };
+        }
       }
 
-      return { error };
-    } catch (error) {
+      if (data?.user) {
+        console.log('Login successful, fetching user profile');
+        await fetchUser(data.user.id);
+        console.log('Profile fetched, navigating to chat');
+        router.replace('/chat');
+      }
+
+      return { error: null };
+    } catch (error: any) {
       console.error('Error during sign in:', error);
-      return { error };
+      return { error: { message: error.message || 'An unexpected error occurred.' } };
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const signOut = async () => {
-    console.log('Signing out user');
-    await supabase.auth.signOut();
-    console.log('User signed out, navigating to login');
-    router.replace('/login');
+    try {
+      console.log('Signing out user');
+      setIsLoading(true);
+      await supabase.auth.signOut();
+      setSession(null);
+      setUser(null);
+      console.log('User signed out, navigating to login');
+      router.replace('/login');
+    } catch (error) {
+      console.error('Error during sign out:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const resetPassword = async (email: string) => {

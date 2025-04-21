@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Animated, ActivityIndicator, TouchableOpacity, ScrollView, Platform, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Animated, ActivityIndicator, TouchableOpacity, ScrollView, Platform, RefreshControl, Image, ListRenderItem } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useChat } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
@@ -9,7 +9,16 @@ import ChatBubble from '@/components/ChatBubble';
 import MessageInput from '@/components/MessageInput';
 import QuickPromptButton from '@/components/QuickPromptButton';
 import ConversationItem from '@/components/ConversationItem';
-import { Menu, Plus, RefreshCw, CircleAlert as AlertCircle } from 'lucide-react-native';
+import { Menu, Plus, RefreshCw, CircleAlert as AlertCircle, PanelLeft } from 'lucide-react-native';
+import SmallLogo from '@/components/SmallLogo';
+import { Conversation, Message, QuickPrompt } from '@/types';
+import ChatIcon from '@/assets/images/chat.svg';
+import MenuIcon from '@/assets/images/side_navigation.svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { generateResponse } from '@/lib/openai';
+import { supabase } from '@/lib/supabase';
+import TypingIndicator from '@/components/TypingIndicator';
 
 export default function ChatScreen() {
   const { 
@@ -36,10 +45,18 @@ export default function ChatScreen() {
   const chatListRef = useRef<FlatList>(null);
   const drawerAnim = useRef(new Animated.Value(0)).current;
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Handle initial load state
+  useEffect(() => {
+    if (!isLoading && isInitialLoad) {
+      setIsInitialLoad(false);
+    }
+  }, [isLoading]);
 
   // Create a timeout to handle cases where loading takes too long
   useEffect(() => {
-    if (isLoading) {
+    if (isLoading && !isInitialLoad) {
       timeoutRef.current = setTimeout(() => {
         setLoadingTimeout(true);
       }, 10000); // 10 seconds timeout
@@ -56,15 +73,15 @@ export default function ChatScreen() {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [isLoading]);
+  }, [isLoading, isInitialLoad]);
 
-  // Create a new conversation if none exists
+  // Create a new conversation when the screen is opened
   useEffect(() => {
-    if (!isLoading && !currentConversation && Array.isArray(conversations) && conversations.length === 0) {
-      console.log('No conversations found, creating a new one');
+    if (!isLoading && !isInitialLoad && (!conversations || conversations.length === 0)) {
+      console.log('Creating initial conversation');
       createNewConversation();
     }
-  }, [isLoading, currentConversation, conversations]);
+  }, [isLoading, conversations, isInitialLoad]);
 
   // Scroll to bottom when new messages are added
   useEffect(() => {
@@ -102,19 +119,36 @@ export default function ChatScreen() {
     outputRange: [-300, 0],
   });
 
-  const renderChatMessage = ({ item }) => {
+  const renderChatMessage = ({ item }: { item: Message }) => {
     if (!item) return null;
     return <ChatBubble message={item} />;
   };
 
   // Create icon components with platform-specific props
-  const MenuIcon = () => <Menu size={24} color={colors.text} strokeWidth={2} />;
-  const PlusIcon = () => <Plus size={24} color={colors.primary} strokeWidth={2} />;
+  const MenuIconComponent = () => (
+    <MenuIcon 
+      width={24}
+      height={24}
+      fill="#033291"
+    />
+  );
+  const PlusIcon = () => <ChatIcon width={32} height={32} />;
   const SmallPlusIcon = () => <Plus size={20} color={colors.primary} strokeWidth={2} />;
   const RefreshIcon = () => <RefreshCw size={20} color={colors.primary} strokeWidth={2} />;
   const AlertIcon = () => <AlertCircle size={20} color={colors.error} strokeWidth={2} />;
 
-  if (isLoading && !loadingTimeout) {
+  const renderItem: ListRenderItem<Conversation> = ({ item }) => (
+    <ConversationItem
+      conversation={item}
+      isActive={currentConversation?.id === item.id}
+      onPress={() => {
+        loadConversation(item.id);
+        toggleDrawer();
+      }}
+    />
+  );
+
+  if (isLoading && isInitialLoad && !loadingTimeout) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -148,15 +182,15 @@ export default function ChatScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={toggleDrawer} style={styles.menuButton}>
-          <MenuIcon />
+          <MenuIconComponent />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {currentConversation?.title || 'New Conversation'}
-        </Text>
+        <View style={styles.logoContainer}> 
+          <SmallLogo />
+        </View>
         <TouchableOpacity onPress={createNewConversation} style={styles.newChatButton}>
           <PlusIcon />
         </TouchableOpacity>
@@ -186,16 +220,7 @@ export default function ChatScreen() {
           <FlatList
             data={conversations || []}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <ConversationItem
-                conversation={item}
-                isActive={currentConversation?.id === item.id}
-                onPress={() => {
-                  loadConversation(item.id);
-                  toggleDrawer();
-                }}
-              />
-            )}
+            renderItem={renderItem}
             ListEmptyComponent={() => (
               <View style={styles.emptyState}>
                 <Text style={[styles.emptyText, { color: colors.secondary }]}>
@@ -224,8 +249,8 @@ export default function ChatScreen() {
         </SafeAreaView>
       </Animated.View>
 
-      {/* Chat Content */}
-      <View style={styles.chatContainer}>
+      {/* Chat Content Area */}
+      <View style={styles.chatContainer}> 
         {error && (
           <View style={[styles.errorContainer, { backgroundColor: colors.error + '20' }]}>
             <AlertIcon />
@@ -240,68 +265,31 @@ export default function ChatScreen() {
         )}
         
         {currentConversation ? (
-          <>
-            <FlatList
-              ref={chatListRef}
-              data={(currentConversation.messages || []).filter(m => m?.role !== 'system')}
-              renderItem={renderChatMessage}
-              keyExtractor={(item) => item?.id || Math.random().toString()}
-              contentContainerStyle={styles.chatContent}
-              ListEmptyComponent={
-                <View style={styles.emptyChatContainer}>
-                  <Text style={[styles.emptyChatText, { color: colors.secondary }]}>
-                    No messages yet. Start chatting below!
-                  </Text>
-                </View>
-              }
-              ListFooterComponent={
-                isSending ? (
-                  <View style={styles.loadingIndicator}>
-                    <ActivityIndicator size="small" color={colors.primary} />
-                  </View>
-                ) : null
-              }
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={handleRefresh}
-                  colors={[colors.primary]}
-                  tintColor={colors.primary}
-                />
-              }
-            />
-            
-            {/* Always show quick prompts for empty conversations */}
-            {Array.isArray(currentConversation.messages) && 
-             currentConversation.messages.filter(m => m?.role === 'user').length === 0 && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.quickPromptsContainer}
-              >
-                {/* Force render of quick prompts even if quickPrompts is empty */}
-                {(quickPrompts && quickPrompts.length > 0 ? quickPrompts : [
-                  { id: '1', text: "What are the steps to purchase a home?", user_type: 'buyer' },
-                  { id: '2', text: "What if inspections go poorly?", user_type: 'buyer' },
-                  { id: '3', text: "What if I need to get out of this deal?", user_type: 'buyer' },
-                  { id: '4', text: "🧭 Explore Timelines", user_type: 'buyer' },
-                  { id: '5', text: "How much home can I afford?", user_type: 'buyer' },
-                  { id: '6', text: "What are closing costs?", user_type: 'buyer' },
-                ]).map((prompt) => (
-                  <QuickPromptButton
-                    key={prompt.id}
-                    text={prompt.text}
-                    onPress={() => sendQuickPrompt(prompt.text)}
-                  />
-                ))}
-              </ScrollView>
-            )}
-            
-            <MessageInput
-              onSend={sendMessage}
-              disabled={isSending}
-            />
-          </>
+          <FlatList
+            ref={chatListRef}
+            data={(currentConversation.messages || []).filter(m => m?.role !== 'system')}
+            renderItem={renderChatMessage}
+            keyExtractor={(item) => item?.id || Math.random().toString()}
+            contentContainerStyle={styles.chatContent}
+            ListEmptyComponent={
+              <View style={styles.emptyChatContainer}>
+                <Text style={[styles.emptyChatText, { color: colors.secondary }]}>
+                  No messages yet. Start chatting below!
+                </Text>
+              </View>
+            }
+            ListFooterComponent={
+              isSending ? <TypingIndicator /> : null
+            }
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                colors={[colors.primary]}
+                tintColor={colors.primary}
+              />
+            }
+          />
         ) : (
           <View style={styles.emptyChatContainer}>
             <Text style={[styles.emptyChatText, { color: colors.secondary }]}>
@@ -316,6 +304,39 @@ export default function ChatScreen() {
             </TouchableOpacity>
           </View>
         )}
+      </View>
+
+      {/* Quick Prompts Container */}
+      {currentConversation && Array.isArray(currentConversation.messages) && 
+       currentConversation.messages.filter(m => m?.role === 'user').length === 0 && (
+        <View style={styles.quickPromptsWrapper}>
+          <ScrollView 
+            horizontal={false}
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.quickPromptsContainer}
+          >
+            {(quickPrompts && quickPrompts.length > 0 ? quickPrompts : [
+              { id: '1', text: "What are the steps to purchase a home?", user_type: 'buyer' as const },
+              { id: '2', text: "What if inspections go poorly?", user_type: 'buyer' as const },
+              { id: '3', text: "What if I need to get out of this deal?", user_type: 'buyer' as const },
+              { id: '5', text: "How much home can I afford?", user_type: 'buyer' as const },
+              { id: '6', text: "What are closing costs?", user_type: 'buyer' as const },
+            ]).map((prompt) => (
+              <QuickPromptButton
+                key={prompt.id}
+                prompt={prompt}
+                onPress={() => sendQuickPrompt(prompt.text)}
+                disabled={isSending}
+              />
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Message Input Container */}
+      <View style={styles.messageInputContainer}> 
+        <MessageInput onSend={sendMessage} isLoading={isSending} />
       </View>
 
       {/* Overlay to close drawer when tapped */}
@@ -333,6 +354,47 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    overflow: 'visible',
+  },
+  chatContainer: {
+    flex: 1,
+  },
+  chatContent: {
+    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 150,
+    paddingTop: 8,
+  },
+  messageInputContainer: {
+    position: 'absolute',
+    bottom: 70,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.light.background,
+    borderTopWidth: 0,
+    zIndex: 100,
+    shadowColor: 'rgb(5, 52, 145)',
+    shadowOffset: {
+      width: 0,
+      height: -4,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 41.6,
+    elevation: 20,
+  },
+  quickPromptsWrapper: {
+    position: 'absolute',
+    bottom: 147,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.light.background,
+    zIndex: 99,
+  },
+  quickPromptsContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+    gap: 8,
   },
   loadingContainer: {
     flex: 1,
@@ -349,16 +411,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    height: 56,
     borderBottomWidth: 1,
     zIndex: 10,
   },
   menuButton: {
     padding: 4,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  logoContainer: {
+    flex: 1,
+    alignItems: 'center',
   },
   newChatButton: {
     padding: 4,
@@ -411,31 +473,28 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     zIndex: 15,
   },
-  chatContainer: {
-    flex: 1,
-  },
-  chatContent: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  loadingIndicator: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  quickPromptsContainer: {
-    padding: 16,
-    paddingTop: 0,
-  },
   emptyChatContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: 20,
   },
   emptyChatText: {
-    textAlign: 'center',
     fontSize: 16,
-    marginBottom: 20,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  newChatButtonLarge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  newChatButtonText: {
+    color: 'white',
+    fontWeight: '500',
+    marginLeft: 8,
   },
   errorContainer: {
     padding: 16,
@@ -481,17 +540,5 @@ const styles = StyleSheet.create({
   },
   altButtonText: {
     fontWeight: '500',
-  },
-  newChatButtonLarge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  newChatButtonText: {
-    color: 'white',
-    fontWeight: '500',
-    marginLeft: 8,
   },
 });
